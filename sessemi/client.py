@@ -122,7 +122,6 @@ class Sessemi:
         self._http = _requests.Session()
         if self.api_key:
             self._http.headers["X-API-Key"] = self.api_key
-        self._http.headers["ngrok-skip-browser-warning"] = "1"
 
     def scrape(
         self,
@@ -140,6 +139,7 @@ class Sessemi:
         retry_on: list = None,
     ) -> ScrapeResult:
         """
+        Scrape a URL through api
 
         Args:
             url:          Target URL to scrape.
@@ -251,12 +251,26 @@ class Sessemi:
         except _requests.exceptions.ConnectionError as e:
             raise SessemiUnavailable(f"cannot reach {self.base_url}: {e}")
 
-        if resp.status_code == 429:
+        # Parse JSON safely — ngrok/proxies may return HTML error pages
+        try:
             data = resp.json()
+        except (ValueError, _requests.exceptions.JSONDecodeError):
+            # Not JSON — likely ngrok 502/504 HTML page or tunnel expired
+            snippet = resp.text[:200].strip()
+            if resp.status_code >= 500:
+                raise SessemiUnavailable(
+                    f"upstream error (HTTP {resp.status_code}): {snippet}")
+            elif resp.status_code == 404:
+                raise SessemiUnavailable(
+                    f"endpoint not found (HTTP 404) — check SESSEMI_URL: {snippet}")
+            else:
+                raise SessemiError(
+                    f"non-JSON response (HTTP {resp.status_code}): {snippet}")
+
+        if resp.status_code == 429:
             raise SessemiUnavailable(data.get("error", "queue full"))
 
         resp.raise_for_status()
-        data = resp.json()
 
         elapsed = int((time.monotonic() - t0) * 1000)
         url_short = body.get("url", "?")[:60]
