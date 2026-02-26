@@ -27,6 +27,7 @@ class ScrapeResult:
     country: str = ""
     session: str = ""
     challenge_type: str = ""
+    challenge_provider: str = ""
     wait_for_match: str = ""
     failure_type: str = ""
     status_code: int = 0
@@ -34,6 +35,12 @@ class ScrapeResult:
     queued_ms: int = 0
     retry_count: int = 0
     error: str = ""
+    warning: str = ""
+    pool: str = ""
+    solved: bool = False
+    credits_charged: int = 0
+    credits_remaining: int = 0
+    resolved_url: str = ""
     screenshot: bytes = b""
     response: _requests.Response = field(default=None, repr=False)
 
@@ -124,6 +131,9 @@ class Sessemi:
         self,
         url: str,
         *,
+        pool: str = None,
+        solve: bool = None,
+        region: str = None,
         timeout: int = None,
         proxy: str = None,
         country: str = None,
@@ -140,15 +150,22 @@ class Sessemi:
 
         Args:
             url:          Target URL to scrape.
+            pool:         Proxy pool: "datacenter" (1 credit) or "residential"
+                          (10 credits, solving included). Default: datacenter.
+            solve:        Enable challenge solving (Cloudflare, Akamai, DataDome).
+                          Default: True for residential, False for datacenter.
+                          Datacenter + solve = 6 credits (budget option).
+            region:       Residential proxy region: "eu", "na", "as", "af", "oc", "sa".
+                          Also accepts full names: "europe", "north_america", etc.
+                          Only with pool="residential".
             timeout:      Max seconds for the scrape (default: self.timeout).
             proxy:        Per-request proxy URL. Supports standard format
                           "http://user:pass@host:port" and colon format
-                          "host:port:user:pass". NST Proxy example:
-                          "http://user-session-{session_id}-country-{country}:pass@gw-eu.nstproxy.io:24125"
-                          Server expands {session_id} and {country} automatically.
+                          "host:port:user:pass". Server expands {session_id}
+                          and {country} automatically.
                           Use "none"/"direct" for no proxy, or omit for server default.
-            country:      Proxy country code (e.g. "FR", "DE"). Expands {country}
-                          in the server's proxy template.
+            country:      Proxy country code (e.g. "FR", "DE"). Only with
+                          pool="residential".
             session:      Session ID — pins request to a specific worker so cookies
                           and IP persist across requests. Any string works.
             screenshot:   If True, include base64 PNG screenshot in response.
@@ -163,17 +180,24 @@ class Sessemi:
             retry:        Max retries on failure (default: self.retries).
             retry_on:     Failure types to retry on (default: self.retry_on).
                           Options: "server_error", "challenge_timeout",
-                          "navigate_failed", "blocked".
+                          "challenge_unsolved", "navigate_failed", "blocked".
 
         Returns:
-            ScrapeResult with .wait_for_match indicating what matched:
-                "css"     — wait_for CSS selector matched
-                "js"      — wait_for_js expression returned truthy
-                "timeout" — neither matched within wait_timeout
-                ""        — no wait condition was specified
+            ScrapeResult with:
+                .solved        — True if a challenge was detected and solved
+                .warning       — Non-fatal advisory (e.g. DC solve less reliable)
+                .pool          — Pool used: "datacenter", "residential", "custom"
+                .challenge_type — "clear", "solved", "blocked", "timeout", etc.
+                .wait_for_match — "css", "js", "timeout", or ""
         """
         body = {"url": url, "timeout": timeout or self.timeout}
 
+        if pool:
+            body["pool"] = pool
+        if solve is not None:
+            body["solve"] = solve
+        if region:
+            body["region"] = region
         if proxy:
             body["proxy"] = proxy
         if country:
@@ -275,5 +299,8 @@ class Sessemi:
             logger.debug("✓ %s (%dms w%s)", url_short, elapsed, data.get("worker_id", "?"))
         else:
             logger.warning("✗ %s → %s (%dms)", url_short, data.get("failure_type", "?"), elapsed)
+
+        if data.get("warning"):
+            logger.warning("⚠ %s: %s", url_short, data["warning"])
 
         return data, resp
