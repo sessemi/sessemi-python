@@ -94,10 +94,7 @@ class Sessemi:
         retries: int = _UNSET,
         retry_on: list = _UNSET,
     ):
-        self.base_url = (
-            url if url is not _UNSET
-            else os.environ["SESSEMI_URL"]
-        ).rstrip("/")
+        self.base_url = 'https://api.sessemi.com'
 
         self.api_key = (
             key if key is not _UNSET
