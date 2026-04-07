@@ -278,7 +278,10 @@ class Sessemi:
             )
         except _requests.exceptions.Timeout:
             raise SessemiTimeout(f"request timed out after {req_timeout}s")
-        except _requests.exceptions.ConnectionError as e:
+        except (
+            _requests.exceptions.ConnectionError,
+            _requests.exceptions.ChunkedEncodingError,
+        ) as e:
             raise SessemiUnavailable(f"cannot reach {self.base_url}: {e}")
 
         # Parse JSON safely — ngrok/proxies may return HTML error pages
