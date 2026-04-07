@@ -134,6 +134,7 @@ class Sessemi:
         self,
         url: str,
         *,
+        stealth: bool = None,
         pool: str = None,
         solve: bool = None,
         region: str = None,
@@ -142,6 +143,7 @@ class Sessemi:
         country: str = None,
         session: str = None,
         screenshot: bool = False,
+        block_resources: bool = False,
         wait_for: str = None,
         wait_for_js: str = None,
         wait_timeout: int = None,
@@ -195,6 +197,8 @@ class Sessemi:
         """
         body = {"url": url, "timeout": timeout or self.timeout}
 
+        if stealth is not None:
+            body["stealth"] = stealth
         if pool:
             body["pool"] = pool
         if solve is not None:
@@ -209,6 +213,8 @@ class Sessemi:
             body["session"] = session
         if screenshot:
             body["screenshot"] = True
+        if block_resources:
+            body["block_resources"] = True
         if wait_for:
             body["wait_for"] = wait_for
         if wait_for_js:
