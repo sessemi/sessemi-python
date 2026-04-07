@@ -2,4 +2,4 @@
 from .client import Sessemi, ScrapeResult, SessemiError, SessemiTimeout, SessemiUnavailable
 
 __all__ = ["Sessemi", "ScrapeResult", "SessemiError", "SessemiTimeout", "SessemiUnavailable"]
-__version__ = "0.9.1"
+__version__ = "0.10.0"
