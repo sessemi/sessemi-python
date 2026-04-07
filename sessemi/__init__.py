@@ -1,5 +1,5 @@
 # open sessemi
-from .client import Sessemi, ScrapeResult
+from .client import Sessemi, ScrapeResult, SessemiError, SessemiTimeout, SessemiUnavailable
 
-__all__ = ["Sessemi", "ScrapeResult"]
-__version__ = "0.1.0"
+__all__ = ["Sessemi", "ScrapeResult", "SessemiError", "SessemiTimeout", "SessemiUnavailable"]
+__version__ = "0.9.1"
