@@ -149,6 +149,7 @@ class Sessemi:
         wait_timeout: int = None,
         retry: int = None,
         retry_on: list = None,
+        render: bool = False,
     ) -> ScrapeResult:
         """
         Scrape a URL through api
@@ -221,6 +222,8 @@ class Sessemi:
             body["wait_for_js"] = wait_for_js
         if wait_timeout is not None:
             body["wait_timeout"] = wait_timeout
+        if render:
+            body["render"] = True
 
         r = retry if retry is not None else self.retries
         ro = retry_on if retry_on is not None else self.retry_on
