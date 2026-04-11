@@ -18,6 +18,7 @@ class ScrapeResult:
     success: bool
     url: str
     html: str = ""
+    json: str = ""  # populated when target returns application/json (html is empty)
     html_size: int = 0
     cookies: list = field(default_factory=list)
     user_agent: str = ""
@@ -63,12 +64,13 @@ class ScrapeResult:
         """Raw response bytes — drop-in for requests.Response.content"""
         if self.response is not None:
             return self.response.content
-        return self.html.encode("utf-8") if self.html else b""
+        body = self.html or self.json
+        return body.encode("utf-8") if body else b""
 
     @property
     def text(self) -> str:
         """Response text — drop-in for requests.Response.text"""
-        return self.html
+        return self.html or self.json
 
 
 class SessemiError(Exception):
