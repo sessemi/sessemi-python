@@ -151,6 +151,7 @@ class Sessemi:
         retry_on: list = None,
         render: bool = False,
         exclude_cookies: list = None,
+        headers: dict = None,
     ) -> ScrapeResult:
         """
         Scrape a URL through api
@@ -188,6 +189,10 @@ class Sessemi:
             retry_on:     Failure types to retry on (default: self.retry_on).
                           Options: "server_error", "challenge_timeout",
                           "challenge_unsolved", "navigate_failed", "blocked".
+            headers:      Custom HTTP headers to send with the request.
+                          Dict of {name: value}. Applied on both fast path
+                          and browser path (render=True). Host and Connection
+                          cannot be overridden.
 
         Returns:
             ScrapeResult with:
@@ -227,6 +232,8 @@ class Sessemi:
             body["render"] = True
         if exclude_cookies:
             body["exclude_cookies"] = exclude_cookies
+        if headers:
+            body["headers"] = headers
 
         r = retry if retry is not None else self.retries
         ro = retry_on if retry_on is not None else self.retry_on
