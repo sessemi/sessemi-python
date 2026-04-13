@@ -139,7 +139,6 @@ class Sessemi:
         stealth: bool = None,
         pool: str = None,
         solve: bool = None,
-        region: str = None,
         timeout: int = None,
         proxy: str = None,
         country: str = None,
@@ -165,9 +164,6 @@ class Sessemi:
             solve:        Enable challenge solving (Cloudflare, Akamai, DataDome).
                           Default: True for residential, False for datacenter.
                           Datacenter + solve = 6 credits (budget option).
-            region:       Residential proxy region: "eu", "na", "as", "af", "oc", "sa".
-                          Also accepts full names: "europe", "north_america", etc.
-                          Only with pool="residential".
             timeout:      Max seconds for the scrape (default: self.timeout).
             proxy:        Per-request proxy URL. Supports standard format
                           "http://user:pass@host:port" and colon format
@@ -212,8 +208,6 @@ class Sessemi:
             body["pool"] = pool
         if solve is not None:
             body["solve"] = solve
-        if region:
-            body["region"] = region
         if proxy:
             body["proxy"] = proxy
         if country:
