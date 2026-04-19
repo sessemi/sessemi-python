@@ -241,6 +241,151 @@ class Sessemi:
         data, resp = self._post("/scrape", body)
         return ScrapeResult.from_json(data, response=resp)
 
+    def scrape_batch(
+        self,
+        urls: list,
+        *,
+        country: str = None,
+        render: bool = None,
+        solve: bool = None,
+        stealth: bool = None,
+        block_resources: bool = None,
+        headers: dict = None,
+        timeout: int = 300,
+        poll_interval: float = 2.0,
+    ) -> list:
+        """Scrape multiple URLs concurrently via async tasks.
+
+        Submits all URLs as async tasks, then polls until all complete
+        or the timeout is reached. Returns results in the same order
+        as the input URLs.
+
+        Not compatible with the ``session`` parameter (server rejects it).
+
+        Args:
+            urls:             List of URLs to scrape.
+            country:          Two-letter country code for proxy geolocation.
+            render:           Force browser rendering.
+            solve:            Attempt anti-bot challenge solving.
+            stealth:          Start fast, escalate only when challenged.
+            block_resources:  Block images/fonts/media for speed.
+            headers:          Custom HTTP headers to forward.
+            timeout:          Max seconds to wait for all tasks (default 300).
+            poll_interval:    Seconds between poll cycles (default 2.0).
+
+        Returns:
+            List of ScrapeResult, one per URL, in input order.
+            Failed tasks have success=False with error details.
+
+        Example::
+
+            results = client.scrape_batch(
+                ["https://example.com/1", "https://example.com/2"],
+                stealth=True,
+                country="FR",
+            )
+            for r in results:
+                print(f"{r.url} — {'OK' if r.ok else r.error}")
+        """
+        if not urls:
+            return []
+
+        # Shared params (everything except url)
+        shared = {}
+        if country is not None:
+            shared["country"] = country
+        if render is not None:
+            shared["render"] = render
+        if solve is not None:
+            shared["solve"] = solve
+        if stealth is not None:
+            shared["stealth"] = stealth
+        if block_resources is not None:
+            shared["block_resources"] = block_resources
+        if headers is not None:
+            shared["headers"] = headers
+
+        # ── Submit all as async tasks ──
+        task_ids = []  # parallel to urls
+        for url in urls:
+            body = {"url": url, **shared}
+            try:
+                resp = self._http.post(
+                    f"{self.base_url}/scrape?async=true",
+                    json=body,
+                    timeout=(10, 30),
+                )
+                if resp.status_code == 202:
+                    task_ids.append(resp.json().get("task_id"))
+                else:
+                    task_ids.append(None)
+                    logger.warning("batch: submit failed for %s (HTTP %d)", url[:60], resp.status_code)
+            except Exception as exc:
+                task_ids.append(None)
+                logger.warning("batch: submit error for %s: %s", url[:60], exc)
+
+        submitted = sum(1 for t in task_ids if t is not None)
+        logger.info("batch: submitted %d/%d async tasks", submitted, len(urls))
+
+        # Pre-fill failures for tasks that never submitted
+        results = [None] * len(urls)
+        for i, tid in enumerate(task_ids):
+            if tid is None:
+                results[i] = ScrapeResult.from_json({
+                    "success": False,
+                    "url": urls[i],
+                    "error": "async task submission failed",
+                })
+
+        # ── Poll until all tasks resolve or timeout ──
+        pending = {i: tid for i, tid in enumerate(task_ids) if tid is not None}
+        deadline = time.monotonic() + timeout
+
+        while pending and time.monotonic() < deadline:
+            time.sleep(poll_interval)
+
+            for i, tid in list(pending.items()):
+                try:
+                    resp = self._http.get(
+                        f"{self.base_url}/tasks/{tid}",
+                        timeout=(10, 30),
+                    )
+                    if resp.status_code != 200:
+                        continue
+
+                    data = resp.json()
+                    status = data.get("status")
+
+                    if status in ("done", "failed"):
+                        result_data = data.get("result")
+                        if result_data and isinstance(result_data, dict):
+                            results[i] = ScrapeResult.from_json(result_data)
+                        else:
+                            results[i] = ScrapeResult.from_json({
+                                "success": False,
+                                "url": urls[i],
+                                "error": f"task {status} with no result",
+                            })
+                        del pending[i]
+                except Exception:
+                    continue
+
+            if pending:
+                logger.debug("batch: %d/%d tasks still pending", len(pending), len(urls))
+
+        # Timeout stragglers
+        for i in pending:
+            results[i] = ScrapeResult.from_json({
+                "success": False,
+                "url": urls[i],
+                "error": f"task timed out after {timeout}s (task_id: {task_ids[i]})",
+            })
+            logger.warning("batch: task %s timed out for %s", task_ids[i], urls[i][:60])
+
+        ok_count = sum(1 for r in results if r.success)
+        logger.info("batch: complete — %d/%d succeeded", ok_count, len(urls))
+        return results
+
     def screenshot(self, url: str, *, timeout: int = None) -> bytes:
         resp = self._http.post(
             f"{self.base_url}/screenshot",
