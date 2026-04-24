@@ -457,6 +457,18 @@ class Sessemi:
         if resp.status_code == 429:
             raise SessemiUnavailable(data.get("error", "queue full"))
 
+        # Surface the server's error message for 4xx responses.
+        # Without this, raise_for_status() gives a generic "400 Bad Request"
+        # and the actual explanation (e.g. "Country targeting requires
+        # pool=residential") is lost.
+        if resp.status_code >= 400 and resp.status_code < 500:
+            msg = data.get("error", resp.text[:200])
+            hint = data.get("hint", "")
+            detail = f"{msg} ({hint})" if hint else msg
+            raise SessemiError(
+                f"HTTP {resp.status_code}: {detail}"
+            )
+
         resp.raise_for_status()
 
         elapsed = int((time.monotonic() - t0) * 1000)
