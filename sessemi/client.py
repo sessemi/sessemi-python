@@ -42,6 +42,7 @@ class ScrapeResult:
     credits_charged: int = 0
     credits_remaining: int = 0
     resolved_url: str = ""
+    script_result: dict = field(default=None, repr=False)  # JS script execution result
     screenshot: bytes = b""
     response: _requests.Response = field(default=None, repr=False)
 
@@ -240,6 +241,71 @@ class Sessemi:
 
         data, resp = self._post("/scrape", body)
         return ScrapeResult.from_json(data, response=resp)
+
+    def script_exec(
+        self,
+        script: str,
+        *,
+        session: str,
+        timeout: int = None,
+    ) -> ScrapeResult:
+        """Run JavaScript on the current page in an existing browser session.
+
+        Script-only mode: no URL navigation. The script executes in the
+        context of whatever page the session last navigated to, with full
+        access to the browser's cookies and DOM.
+
+        The script body is wrapped in an async IIFE — use ``await`` freely
+        and ``return`` the result (will be JSON-serialized).
+
+        Args:
+            script:   JavaScript code to execute.
+            session:  Session ID (must already exist from a prior scrape).
+            timeout:  Max seconds for script execution.
+
+        Returns:
+            ScrapeResult with ``script_result`` populated.
+            Use :meth:`parse_script_result` to extract the parsed value.
+
+        Example::
+
+            # After a render=True scrape creates a session:
+            result = client.script_exec(
+                "return document.title;",
+                session="my-session",
+            )
+            title = Sessemi.parse_script_result(result.script_result)
+        """
+        body = {
+            "script": script,
+            "session": session,
+            "timeout": timeout or self.timeout,
+        }
+        data, resp = self._post("/scrape", body)
+        return ScrapeResult.from_json(data, response=resp)
+
+    @staticmethod
+    def parse_script_result(script_result):
+        """Extract the parsed Python object from a script_result.
+
+        The engine may wrap the result in a transport envelope.
+        This method handles all formats and returns the unwrapped value.
+
+        Args:
+            script_result: The ``script_result`` field from a ScrapeResult.
+
+        Returns:
+            The parsed Python object (dict, list, str, etc.), or None.
+        """
+        import json as _json
+        if script_result is None:
+            return None
+        if isinstance(script_result, dict) and "value" in script_result:
+            raw = script_result["value"]
+            return _json.loads(raw) if isinstance(raw, str) else raw
+        if isinstance(script_result, str):
+            return _json.loads(script_result)
+        return script_result
 
     def scrape_batch(
         self,
