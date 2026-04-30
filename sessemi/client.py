@@ -154,6 +154,8 @@ class Sessemi:
         render: bool = False,
         exclude_cookies: list = None,
         headers: dict = None,
+        method: str = None,
+        body: str = None,
     ) -> ScrapeResult:
         """
         Scrape a URL through api
@@ -192,6 +194,11 @@ class Sessemi:
                           Dict of {name: value}. Applied on both fast path
                           and browser path (render=True). Host and Connection
                           cannot be overridden.
+            method:       HTTP method: "GET", "POST", "PUT", "PATCH", "DELETE".
+                          Default: "GET". Only applies to the fast path.
+            body:         Request body for POST/PUT/PATCH. Typically URL-encoded
+                          form data or a JSON string. Set Content-Type via
+                          the headers parameter.
 
         Returns:
             ScrapeResult with:
@@ -201,6 +208,7 @@ class Sessemi:
                 .challenge_type — "clear", "solved", "blocked", "timeout", etc.
                 .wait_for_match — "css", "js", "timeout", or ""
         """
+        request_body = body  # capture before local 'body' shadows the param
         body = {"url": url, "timeout": timeout or self.timeout}
 
         if stealth is not None:
@@ -231,6 +239,10 @@ class Sessemi:
             body["exclude_cookies"] = exclude_cookies
         if headers:
             body["headers"] = headers
+        if method and method.upper() != "GET":
+            body["method"] = method.upper()
+        if request_body:
+            body["body"] = request_body
 
         r = retry if retry is not None else self.retries
         ro = retry_on if retry_on is not None else self.retry_on
@@ -253,7 +265,7 @@ class Sessemi:
 
         Script-only mode: no URL navigation. The script executes in the
         context of whatever page the session last navigated to, with full
-        access to the browser's cookies and DOM.
+        access to the browser's cookies (including validated _abck, etc.).
 
         The script body is wrapped in an async IIFE — use ``await`` freely
         and ``return`` the result (will be JSON-serialized).
@@ -265,16 +277,8 @@ class Sessemi:
 
         Returns:
             ScrapeResult with ``script_result`` populated.
-            Use :meth:`parse_script_result` to extract the parsed value.
-
-        Example::
-
-            # After a render=True scrape creates a session:
-            result = client.script_exec(
-                "return document.title;",
-                session="my-session",
-            )
-            title = Sessemi.parse_script_result(result.script_result)
+            The engine returns ``{"value": "<json_string>"}`` via Marionette;
+            use :meth:`parse_script_result` to unwrap.
         """
         body = {
             "script": script,
@@ -286,16 +290,10 @@ class Sessemi:
 
     @staticmethod
     def parse_script_result(script_result):
-        """Extract the parsed Python object from a script_result.
+        """Unwrap script_result from engine response.
 
-        The engine may wrap the result in a transport envelope.
-        This method handles all formats and returns the unwrapped value.
-
-        Args:
-            script_result: The ``script_result`` field from a ScrapeResult.
-
-        Returns:
-            The parsed Python object (dict, list, str, etc.), or None.
+        The engine wraps as ``{"value": "<json_string>"}`` via Marionette.
+        Returns the parsed Python object.
         """
         import json as _json
         if script_result is None:
@@ -463,20 +461,6 @@ class Sessemi:
 
     def health(self) -> dict:
         resp = self._http.get(f"{self.base_url}/health", timeout=10)
-        resp.raise_for_status()
-        return resp.json()
-
-    def sessions(self) -> dict:
-        resp = self._http.get(f"{self.base_url}/sessions", timeout=10)
-        resp.raise_for_status()
-        return resp.json()
-
-    def delete_session(self, session_id: str) -> dict:
-        resp = self._http.delete(
-            f"{self.base_url}/session",
-            params={"id": session_id},
-            timeout=10,
-        )
         resp.raise_for_status()
         return resp.json()
 
