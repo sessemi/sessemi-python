@@ -19,7 +19,6 @@ class ScrapeResult:
     url: str
     html: str = ""
     json: str = ""  # populated when target returns application/json (html is empty)
-    html_size: int = 0
     body_size: int = 0  # size of whichever field (html or json) has content
     cookies: list = field(default_factory=list)
     user_agent: str = ""
@@ -59,7 +58,7 @@ class ScrapeResult:
 
     @property
     def ok(self) -> bool:
-        return self.success and (self.body_size or self.html_size) > 0
+        return self.success and self.body_size > 0
 
     @property
     def content(self) -> bytes:
