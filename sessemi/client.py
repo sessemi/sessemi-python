@@ -17,8 +17,9 @@ _UNSET = object()
 class ScrapeResult:
     success: bool
     url: str
-    html: str = ""
-    json: str = ""  # populated when target returns application/json (html is empty)
+    content: str = ""  # page content (HTML or JSON string) — server field name since May 2026
+    html: str = ""     # legacy alias (pre-May 2026 API)
+    json: str = ""     # legacy alias (pre-May 2026 API)
     body_size: int = 0  # size of whichever field (html or json) has content
     cookies: list = field(default_factory=list)
     user_agent: str = ""
@@ -61,17 +62,17 @@ class ScrapeResult:
         return self.success and self.body_size > 0
 
     @property
-    def content(self) -> bytes:
-        """Raw response bytes — drop-in for requests.Response.content"""
+    def content_bytes(self) -> bytes:
+        """Raw response bytes — use .text for string content."""
         if self.response is not None:
             return self.response.content
-        body = self.html or self.json
+        body = self.content or self.html or self.json
         return body.encode("utf-8") if body else b""
 
     @property
     def text(self) -> str:
         """Response text — drop-in for requests.Response.text"""
-        return self.html or self.json
+        return self.content or self.html or self.json
 
 
 class SessemiError(Exception):
