@@ -17,7 +17,11 @@ Examples:
 import argparse
 import json
 import os
+import signal
 import sys
+
+# Handle broken pipes (e.g. sessemi scrape URL | head) the Unix way — silent exit.
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 import time
 
 from . import Sessemi, SessemiError, __version__
