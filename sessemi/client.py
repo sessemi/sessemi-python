@@ -18,6 +18,7 @@ class ScrapeResult:
     success: bool
     url: str
     content: str = ""  # page content (HTML or JSON string) — server field name since May 2026
+    content_type: str = ""  # target response Content-Type (e.g. "text/html", "application/json")
     html: str = ""     # legacy alias (pre-May 2026 API)
     json: str = ""     # legacy alias (pre-May 2026 API)
     body_size: int = 0  # size of whichever field (html or json) has content
