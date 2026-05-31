@@ -1,6 +1,6 @@
 # open sessemi
 [build-system]
-requires = ["setuptools>=68.0"]
+requires = ["setuptools>=68.0", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -33,5 +33,9 @@ sessemi = "sessemi.cli:main"
 [project.optional-dependencies]
 dev = ["python-dotenv"]
 
-[tool.setuptools.dynamic]
-version = {attr = "sessemi.__version__"}
+[tool.setuptools_scm]
+# Version is derived from the most recent `v*` git tag.
+# Between tags, setuptools_scm produces e.g. 1.3.0.post3+gabc123d.
+# fallback_version is used if the package is built outside a git work tree
+# (e.g. from a tarball without .git history).
+fallback_version = "0.0.0+unknown"
