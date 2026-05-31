@@ -23,6 +23,10 @@ class ScrapeResult:
     json: str = ""     # legacy alias (pre-May 2026 API)
     body_size: int = 0  # size of whichever field (html or json) has content
     cookies: list = field(default_factory=list)
+    site_cookies: list = field(default_factory=list)  # snapshot of the named
+    # session's stored site cookies for this request's domain (excludes
+    # anti-bot cookies). Enables client-side renewal patterns ("if my expected
+    # cookie cleared, re-establish it") without polling /admin/site-cookies.
     user_agent: str = ""
     worker_id: int = -1
     proxy_used: str = ""
@@ -155,6 +159,7 @@ class Sessemi:
         retry_on: list = None,
         render: bool = False,
         exclude_cookies: list = None,
+        pin_cookies: list = None,
         headers: dict = None,
         method: str = None,
         body: str = None,
@@ -239,6 +244,8 @@ class Sessemi:
             body["render"] = True
         if exclude_cookies:
             body["exclude_cookies"] = exclude_cookies
+        if pin_cookies:
+            body["pin_cookies"] = pin_cookies
         if headers:
             body["headers"] = headers
         if method and method.upper() != "GET":
