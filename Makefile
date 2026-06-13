@@ -36,9 +36,9 @@ endif
 	@set -e; \
 	if [ -n "$$(git status --porcelain)" ]; then echo "❌ Working tree not clean — commit or stash first."; exit 1; fi; \
 	if git rev-parse "v$(VERSION)" >/dev/null 2>&1; then echo "❌ Tag v$(VERSION) already exists."; exit 1; fi
-	@git tag v$(VERSION)
+	@git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	@$(MAKE) publish
-	@git push && git push --tags
+	@git push --atomic origin HEAD "v$(VERSION)"
 	@echo "✅ Released v$(VERSION) → PyPI + origin"
 
 test: ## Smoke test: import + CLI version
