@@ -15,10 +15,14 @@ build: clean ## Build sdist + wheel into dist/
 # The :? guard aborts with a clear message if the var is unset.
 # The leading @ keeps the token from being echoed to the terminal.
 publish: build ## Build, then upload to PyPI (needs PYPI_TOKEN env var)
-	@TWINE_USERNAME=__token__ TWINE_PASSWORD="$${PYPI_TOKEN:?Set PYPI_TOKEN to your pypi-... API token}" twine upload dist/*
+	@v=$$(ls dist/*.whl | head -1 | sed -E 's#.*/sessemi-(.+)-py3.*#\1#'); \
+	case "$$v" in *+*|*.dev*) echo "❌ '$$v' is a local/dev version — you're not on a clean tag."; echo "   PyPI rejects these. Commit, then: make release VERSION=X.Y.Z"; exit 1;; esac; \
+	TWINE_USERNAME=__token__ TWINE_PASSWORD="$${PYPI_TOKEN:?Set PYPI_TOKEN to your pypi-... API token}" twine upload dist/*
 
 publish-test: build ## Build, then upload to TestPyPI (needs TESTPYPI_TOKEN env var)
-	@TWINE_USERNAME=__token__ TWINE_PASSWORD="$${TESTPYPI_TOKEN:?Set TESTPYPI_TOKEN to your TestPyPI API token}" twine upload --repository testpypi dist/*
+	@v=$$(ls dist/*.whl | head -1 | sed -E 's#.*/sessemi-(.+)-py3.*#\1#'); \
+	case "$$v" in *+*|*.dev*) echo "❌ '$$v' is a local/dev version — TestPyPI rejects these too. Tag a clean version first."; exit 1;; esac; \
+	TWINE_USERNAME=__token__ TWINE_PASSWORD="$${TESTPYPI_TOKEN:?Set TESTPYPI_TOKEN to your TestPyPI API token}" twine upload --repository testpypi dist/*
 
 # Usage: make release VERSION=1.3.0
 # Tags HEAD as v$(VERSION), publishes to PyPI, pushes commit + tag.
