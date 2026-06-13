@@ -28,7 +28,6 @@ class ScrapeResult:
     # anti-bot cookies). Enables client-side renewal patterns ("if my expected
     # cookie cleared, re-establish it") without polling /admin/site-cookies.
     user_agent: str = ""
-    worker_id: int = -1
     proxy_used: str = ""
     proxy_port: int = 0
     country: str = ""
@@ -170,10 +169,11 @@ class Sessemi:
         Args:
             url:          Target URL to scrape.
             pool:         Proxy pool: "datacenter" (1 credit) or "residential"
-                          (10 credits, solving included). Default: datacenter.
+                          (3 credits; solving bundled, so a solved protected
+                          page is 5 credits). Default: datacenter.
             solve:        Enable challenge solving (Cloudflare, Akamai, DataDome).
                           Default: True for residential, False for datacenter.
-                          Datacenter + solve = 6 credits (budget option).
+                          Datacenter + solve = 3 credits (budget option).
             timeout:      Max seconds for the scrape (default: self.timeout).
             proxy:        Per-request proxy URL. Supports standard format
                           "http://user:pass@host:port" and colon format
@@ -182,8 +182,8 @@ class Sessemi:
                           Use "none"/"direct" for no proxy, or omit for server default.
             country:      Proxy country code (e.g. "FR", "DE"). Only with
                           pool="residential".
-            session:      Session ID — pins request to a specific worker so cookies
-                          and IP persist across requests. Any string works.
+            session:      Session ID — pins the request to a persistent session
+                          so cookies and IP persist across requests. Any string works.
             screenshot:   If True, include base64 PNG screenshot in response.
             wait_for:     CSS selector(s) to wait for after page load. Comma-
                           separated for OR (e.g. ".products, .no-results").
@@ -533,7 +533,7 @@ class Sessemi:
         elapsed = int((time.monotonic() - t0) * 1000)
         url_short = body.get("url", "?")[:60]
         if data.get("success"):
-            logger.debug("✓ %s (%dms w%s)", url_short, elapsed, data.get("worker_id", "?"))
+            logger.debug("✓ %s (%dms)", url_short, elapsed)
         else:
             logger.warning("✗ %s → %s (%dms)", url_short, data.get("failure_type", "?"), elapsed)
 

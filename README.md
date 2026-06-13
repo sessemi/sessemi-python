@@ -14,7 +14,11 @@ pip install sessemi
 from sessemi import Sessemi
 
 client = Sessemi(key="your_api_key")
-result = client.scrape("https://www.leboncoin.fr/recherche?category=10", country="FR")
+result = client.scrape(
+    "https://www.leboncoin.fr/recherche?category=10",
+    stealth=True,   # residential proxy + challenge solving + auto-retry
+    country="FR",
+)
 
 print(result.content)       # page HTML
 print(result.status_code)   # 200
@@ -41,7 +45,7 @@ Get a free API key at [app.sessemi.com](https://app.sessemi.com).
 from sessemi import Sessemi
 
 # From constructor
-client = Sessemi(key="sk_...")
+client = Sessemi(key="your_api_key")
 
 # Or from environment variables
 # SESSEMI_KEY, SESSEMI_URL, SESSEMI_TIMEOUT, SESSEMI_RETRIES
@@ -53,11 +57,12 @@ client = Sessemi()
 ```python
 result = client.scrape(
     "https://www.example.com",
-    country="FR",          # geo-target (auto-selects residential proxy)
+    stealth=True,          # residential proxy + solving + retry (the bypass switch)
+    country="FR",          # geo-target; requires a residential pool (set by stealth)
     render=True,           # force browser rendering for JS-heavy pages
     session="my-session",  # persist cookies/IP across requests
     headers={"Accept": "application/json"},
-    solve=True,            # enable challenge solving (default for residential)
+    solve=True,            # enable challenge solving (default with stealth/residential)
     block_resources=True,  # skip images/fonts/css for speed
     wait_for="css:.product-list",  # wait for element before returning
     screenshot=True,       # capture screenshot
@@ -95,7 +100,7 @@ for r in results:
 
 ```python
 status = client.health()
-# {"status": "healthy", "workers": 10, ...}
+# {"status": "healthy"}
 ```
 
 ## CLI
