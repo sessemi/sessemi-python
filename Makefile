@@ -8,11 +8,17 @@ help: ## Show this help
 build: clean ## Build sdist + wheel into dist/
 	python3 -m build
 
-publish: build ## Build, then upload to PyPI (twine)
-	twine upload dist/*
+# PyPI auth uses an API token from an env var — no interactive name/password prompt.
+# Export it first (token starts with "pypi-"):
+#   export PYPI_TOKEN=pypi-AgEI...        # for PyPI
+#   export TESTPYPI_TOKEN=pypi-...        # separate token for TestPyPI
+# The :? guard aborts with a clear message if the var is unset.
+# The leading @ keeps the token from being echoed to the terminal.
+publish: build ## Build, then upload to PyPI (needs PYPI_TOKEN env var)
+	@TWINE_USERNAME=__token__ TWINE_PASSWORD="$${PYPI_TOKEN:?Set PYPI_TOKEN to your pypi-... API token}" twine upload dist/*
 
-publish-test: build ## Build, then upload to TestPyPI
-	twine upload --repository testpypi dist/*
+publish-test: build ## Build, then upload to TestPyPI (needs TESTPYPI_TOKEN env var)
+	@TWINE_USERNAME=__token__ TWINE_PASSWORD="$${TESTPYPI_TOKEN:?Set TESTPYPI_TOKEN to your TestPyPI API token}" twine upload --repository testpypi dist/*
 
 # Usage: make release VERSION=1.3.0
 # Tags HEAD as v$(VERSION), publishes to PyPI, pushes commit + tag.
