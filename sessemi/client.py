@@ -274,7 +274,7 @@ class Sessemi:
 
         Script-only mode: no URL navigation. The script executes in the
         context of whatever page the session last navigated to, with full
-        access to the browser's cookies (including validated _abck, etc.).
+        access to the browser's cookies and session state.
 
         The script body is wrapped in an async IIFE — use ``await`` freely
         and ``return`` the result (will be JSON-serialized).
