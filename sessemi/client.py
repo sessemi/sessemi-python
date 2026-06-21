@@ -151,6 +151,7 @@ class Sessemi:
         session: str = None,
         screenshot: bool = False,
         block_resources: bool = False,
+        js_on_load: str = None,
         wait_for: str = None,
         wait_for_js: str = None,
         wait_timeout: int = None,
@@ -193,16 +194,24 @@ class Sessemi:
                           "document.querySelector('h1')?.textContent.includes('Résultat')"
                           Can be combined with wait_for — first match wins.
             wait_timeout: Max seconds to wait for selector/JS (default: 10).
+            js_on_load:   JavaScript expression run in the page when render=True,
+                          after the page loads. Use it to dismiss an overlay or
+                          cookie-consent banner that gates content, or for similar
+                          setup. It may be invoked more than once while the page
+                          settles, so it must be idempotent — acting on an element
+                          that isn't present should be a harmless no-op. The
+                          readiness condition stays in wait_for / wait_for_js.
+                          Ignored when render is not set.
             retry:        Max retries on failure (default: self.retries).
             retry_on:     Failure types to retry on (default: self.retry_on).
                           Options: "server_error", "challenge_timeout",
                           "challenge_unsolved", "navigate_failed", "blocked".
             headers:      Custom HTTP headers to send with the request.
-                          Dict of {name: value}. Applied on both fast path
-                          and browser path (render=True). Host and Connection
-                          cannot be overridden.
+                          Dict of {name: value}. Applied whether or not render
+                          is set. Host and Connection cannot be overridden.
             method:       HTTP method: "GET", "POST", "PUT", "PATCH", "DELETE".
-                          Default: "GET". Only applies to the fast path.
+                          Default: "GET". Applies to non-rendered requests
+                          (when render is not set).
             body:         Request body for POST/PUT/PATCH. Typically URL-encoded
                           form data or a JSON string. Set Content-Type via
                           the headers parameter.
@@ -234,6 +243,8 @@ class Sessemi:
             body["screenshot"] = True
         if block_resources:
             body["block_resources"] = True
+        if js_on_load:
+            body["js_on_load"] = js_on_load
         if wait_for:
             body["wait_for"] = wait_for
         if wait_for_js:
