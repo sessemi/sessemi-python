@@ -49,15 +49,19 @@ class ScrapeResult:
     resolved_url: str = ""
     script_result: dict = field(default=None, repr=False)  # JS script execution result
     screenshot: bytes = b""
+    binary_content: bytes = b""  # raw response bytes when binary=True (decoded from base64)
     response: _requests.Response = field(default=None, repr=False)
 
     @classmethod
     def from_json(cls, data: dict, response: _requests.Response = None) -> "ScrapeResult":
         ss_b64 = data.pop("screenshot", None)
+        bin_b64 = data.pop("binary_content", None)
         known = {k for k in cls.__dataclass_fields__}
         obj = cls(**{k: v for k, v in data.items() if k in known})
         if ss_b64:
             obj.screenshot = base64.b64decode(ss_b64)
+        if bin_b64:
+            obj.binary_content = base64.b64decode(bin_b64)
         obj.response = response
         return obj
 
@@ -163,6 +167,7 @@ class Sessemi:
         headers: dict = None,
         method: str = None,
         body: str = None,
+        binary: bool = False,
     ) -> ScrapeResult:
         """
         Scrape a URL through api
@@ -263,6 +268,8 @@ class Sessemi:
             body["method"] = method.upper()
         if request_body:
             body["body"] = request_body
+        if binary:
+            body["binary"] = True
 
         r = retry if retry is not None else self.retries
         ro = retry_on if retry_on is not None else self.retry_on
