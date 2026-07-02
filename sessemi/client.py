@@ -156,6 +156,7 @@ class Sessemi:
         screenshot: bool = False,
         block_resources: bool = False,
         js_on_load: str = None,
+        script: str = None,
         wait_for: str = None,
         wait_for_js: str = None,
         wait_timeout: int = None,
@@ -250,6 +251,8 @@ class Sessemi:
             body["block_resources"] = True
         if js_on_load:
             body["js_on_load"] = js_on_load
+        if script:
+            body["script"] = script
         if wait_for:
             body["wait_for"] = wait_for
         if wait_for_js:
@@ -304,8 +307,6 @@ class Sessemi:
 
         Returns:
             ScrapeResult with ``script_result`` populated.
-            The engine returns ``{"value": "<json_string>"}`` via Marionette;
-            use :meth:`parse_script_result` to unwrap.
         """
         body = {
             "script": script,
@@ -317,9 +318,7 @@ class Sessemi:
 
     @staticmethod
     def parse_script_result(script_result):
-        """Unwrap script_result from engine response.
-
-        The engine wraps as ``{"value": "<json_string>"}`` via Marionette.
+        """Unwrap script_result from api response.
         Returns the parsed Python object.
         """
         import json as _json
