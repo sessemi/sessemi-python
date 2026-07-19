@@ -163,6 +163,7 @@ class Sessemi:
         retry: int = None,
         retry_on: list = None,
         render: bool = False,
+        render_url: str = None,
         exclude_cookies: list = None,
         pin_cookies: list = None,
         headers: dict = None,
@@ -208,6 +209,7 @@ class Sessemi:
                           that isn't present should be a harmless no-op. The
                           readiness condition stays in wait_for / wait_for_js.
                           Ignored when render is not set.
+            render_url:   A URL the to visit before the target url.
             retry:        Max retries on failure (default: self.retries).
             retry_on:     Failure types to retry on (default: self.retry_on).
                           Options: "server_error", "challenge_timeout",
@@ -261,6 +263,8 @@ class Sessemi:
             body["wait_timeout"] = wait_timeout
         if render:
             body["render"] = True
+        if render_url:
+            body["render_url"] = render_url
         if exclude_cookies:
             body["exclude_cookies"] = exclude_cookies
         if pin_cookies:
